@@ -2,18 +2,39 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
-    <title>Generator Struktur Folder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hierarchy Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
         }
-        textarea {
-            font-family: 'Courier New', Courier, monospace;
+        #output-text {
+            font-family: 'Source Code Pro', monospace;
+            white-space: pre;
+        }
+        #tree-container {
+            /* Memastikan container bisa scroll jika isinya terlalu lebar */
+            overflow-x: auto;
+        }
+        .tree-node-wrapper {
+            position: relative;
+        }
+        .level-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #e5e7eb; 
+            z-index: 1; 
+        }
+        .node-element {
+            position: relative;
+            z-index: 2; 
         }
     </style>
 </head>
@@ -22,19 +43,16 @@
         
         <div class="flex items-center justify-center mb-6">
             <img src="logo.svg" alt="Logo" class="w-10 h-10 mr-3">
-            <br>
+            <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800">Hierarchy Generator</h1>
         </div>
-        <div>
-            <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-2">Hierarchy Generator</h1>
-            <p class="text-center text-gray-600 mb-6">Buat dan kelola struktur folder proyek Anda dengan mudah.</p>
-        </div>
+        <p class="text-center text-gray-600 mb-6">Buat dan kelola struktur folder proyek Anda dengan mudah.</p>
 
-        <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex flex-col lg:flex-row gap-6">
 
-            <div class="md:w-1/2 bg-white p-6 rounded-lg shadow-xl">
+            <div class="lg:w-1/2 bg-white p-6 rounded-lg shadow-xl">
                 <h2 class="text-xl font-semibold mb-4 border-b pb-2">Editor Visual</h2>
 
-                <div class="flex space-x-2 mb-4">
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
                     <button
                         id="add-folder-root-btn"
                         class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
@@ -47,28 +65,37 @@
                     </button>
                 </div>
 
-                <div id="tree-container" class="space-y-2 border-t pt-4"></div>
+                <div id="tree-container" class="border-t pt-4">
+                    <div id="tree-content" class="inline-block min-w-full"></div>
+                </div>
             </div>
 
-            <div class="md:w-1/2 bg-white p-6 rounded-lg shadow-xl">
+            <div class="lg:w-1/2 bg-white p-6 rounded-lg shadow-xl">
                 <h2 class="text-xl font-semibold mb-4 border-b pb-2">Output Teks</h2>
-                <button
-                    id="generate-btn"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 mb-4">
-                    Hasilkan Teks
-                </button>
+                <div class="flex space-x-2">
+                    <button
+                        id="generate-btn"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 mb-4">
+                        Hasilkan Teks
+                    </button>
+                    <button
+                        id="load-btn"
+                        class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 mb-4">
+                        Muat dari Teks
+                    </button>
+                </div>
                 <textarea
                     id="output-text"
-                    readonly
-                    class="w-full h-80 md:h-96 p-3 border border-gray-300 rounded-md bg-gray-50 text-sm"
-                    placeholder="Hasil teks akan muncul di sini..."></textarea>
+                    class="w-full h-80 md:h-96 p-3 border border-gray-300 rounded-md bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    placeholder="Tempel (paste) struktur teks di sini dan tekan 'Muat dari Teks'..."
+                    spellcheck="false"></textarea>
                 <button
                     id="copy-btn"
                     class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
                     Salin Teks
                 </button>
-                <p id="copy-feedback" class="text-green-500 text-center mt-2 font-medium" style="display: none;">
-                    Berhasil disalin!
+                <p id="feedback-msg" class="text-green-500 text-center mt-2 font-medium" style="display: none;">
+                    Berhasil!
                 </p>
             </div>
         </div>
@@ -89,80 +116,71 @@
             ]
         };
 
-        const treeContainer = document.getElementById('tree-container');
+        const treeContent = document.getElementById('tree-content');
         const generateBtn = document.getElementById('generate-btn');
+        const loadBtn = document.getElementById('load-btn');
         const outputText = document.getElementById('output-text');
         const copyBtn = document.getElementById('copy-btn');
-        const copyFeedback = document.getElementById('copy-feedback');
+        const feedbackMsg = document.getElementById('feedback-msg');
         const addFolderRootBtn = document.getElementById('add-folder-root-btn');
         const addFileRootBtn = document.getElementById('add-file-root-btn');
 
+        const LEVEL_INDENT = 24; // Jarak indentasi per level dalam pixel
+
         function renderTree() {
-            treeContainer.innerHTML = '';
-            treeContainer.appendChild(createNodeElement(treeData, null, 0));
+            treeContent.innerHTML = '';
+            treeContent.appendChild(createNodeElement(treeData, null, 0));
         }
 
         function createNodeElement(node, parentNode, level) {
             const nodeWrapper = document.createElement('div');
-            nodeWrapper.style.paddingLeft = `${level * 20}px`;
+            nodeWrapper.className = 'tree-node-wrapper';
+            
+            // Tambahkan garis indikator level
+            for (let i = 1; i <= level; i++) {
+                const indicator = document.createElement('div');
+                indicator.className = 'level-indicator';
+                // Posisi garis adalah (level * indent) - (setengah indent)
+                indicator.style.left = `${(i * LEVEL_INDENT) - (LEVEL_INDENT / 2)}px`; 
+                nodeWrapper.appendChild(indicator);
+            }
 
             const nodeElement = document.createElement('div');
-            nodeElement.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-gray-100';
-
-            const leftSide = document.createElement('span');
-            leftSide.className = 'flex items-center';
+            // 'node-element' untuk z-index, 'flex' untuk layout
+            nodeElement.className = 'node-element flex items-center justify-between py-1.5 pr-2 rounded-lg hover:bg-gray-100';
             
+            const leftSide = document.createElement('span');
+            // 'min-w-0' penting untuk 'truncate' agar berfungsi
+            leftSide.className = 'flex items-center flex-grow min-w-0'; 
+            leftSide.style.paddingLeft = `${level * LEVEL_INDENT}px`;
+
             const icon = document.createElement('span');
-            icon.className = 'mr-2 text-lg';
+            icon.className = 'mr-2 text-lg flex-shrink-0'; // 'flex-shrink-0' agar ikon tidak gepeng
             icon.textContent = node.type === 'folder' ? '📁' : '📄';
             
             const nodeName = document.createElement('span');
             nodeName.textContent = node.name;
-            nodeName.className = 'font-medium';
-            
+            nodeName.className = 'font-medium text-gray-800 truncate'; // 'truncate' untuk (...)
+
             leftSide.appendChild(icon);
             leftSide.appendChild(nodeName);
 
             const rightSide = document.createElement('span');
-            rightSide.className = 'space-x-2';
+            // 'flex-shrink-0' agar tombol tidak pernah gepeng/wrap
+            rightSide.className = 'flex-shrink-0 space-x-1 pl-2'; 
 
             if (node.type === 'folder') {
-                const addFolderBtn = document.createElement('button');
-                addFolderBtn.textContent = '➕ Folder';
-                addFolderBtn.className = 'bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold py-1 px-2 rounded-md';
-                addFolderBtn.onclick = (e) => {
-                    e.stopPropagation(); 
-                    addItem(node, 'folder');
-                };
+                const addFolderBtn = createButton('➕📁', 'blue', () => addItem(node, 'folder'));
+                const addFileBtn = createButton('➕📄', 'green', () => addItem(node, 'file'));
                 rightSide.appendChild(addFolderBtn);
-
-                const addFileBtn = document.createElement('button');
-                addFileBtn.textContent = '➕ File';
-                addFileBtn.className = 'bg-green-100 hover:bg-green-200 text-green-800 text-xs font-bold py-1 px-2 rounded-md';
-                addFileBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    addItem(node, 'file');
-                };
                 rightSide.appendChild(addFileBtn);
             }
 
-            const renameBtn = document.createElement('button');
-            renameBtn.textContent = '✏️ Ganti Nama';
-            renameBtn.className = 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-bold py-1 px-2 rounded-md';
-            renameBtn.onclick = (e) => {
-                e.stopPropagation();
-                renameItem(node);
-            };
+            const renameBtn = createButton('✏️', 'yellow', () => renameItem(node));
             rightSide.appendChild(renameBtn);
 
             if (parentNode) {
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '🗑️';
-                deleteBtn.className = 'bg-red-100 hover:bg-red-200 text-red-800 text-xs font-bold py-1 px-2 rounded-md';
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    deleteItem(parentNode, node);
-                };
+                const deleteBtn = createButton('🗑️', 'red', () => deleteItem(parentNode, node));
                 rightSide.appendChild(deleteBtn);
             }
 
@@ -179,6 +197,17 @@
             }
 
             return nodeWrapper;
+        }
+
+        function createButton(text, color, onClick) {
+            const btn = document.createElement('button');
+            btn.textContent = text;
+            btn.className = `bg-${color}-100 hover:bg-${color}-200 text-${color}-800 text-xs font-bold py-1 px-2 rounded-md transition-colors duration-150`;
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                onClick();
+            };
+            return btn;
         }
 
         function addItem(parentNode, type) {
@@ -246,14 +275,107 @@
             outputText.select();
             document.execCommand('copy');
 
-            copyFeedback.style.display = 'block';
+            showFeedback('Berhasil disalin!');
+        }
+
+        function showFeedback(message) {
+            feedbackMsg.textContent = message;
+            feedbackMsg.style.display = 'block';
             setTimeout(() => {
-                copyFeedback.style.display = 'none';
+                feedbackMsg.style.display = 'none';
             }, 2000); 
         }
 
+        function loadTreeFromText() {
+            const text = outputText.value.trim();
+            if (!text) {
+                alert("Text area kosong!");
+                return;
+            }
+            
+            try {
+                const newTree = parseTextToTree(text);
+                if (newTree) {
+                    treeData = newTree;
+                    renderTree();
+                    showFeedback('Berhasil memuat struktur!');
+                } else {
+                    alert("Format teks tidak valid.");
+                }
+            } catch (error) {
+                console.error("Gagal parse teks:", error);
+                alert("Gagal memuat struktur. Pastikan format teks benar.");
+            }
+        }
+        
+        function parseTextToTree(text) {
+            const lines = text.split('\n');
+            if (lines.length === 0) return null;
+
+            const rootName = lines[0].trim();
+            const root = {
+                name: rootName,
+                type: rootName.endsWith('/') ? 'folder' : 'file',
+                children: []
+            };
+
+            // Stack untuk melacak parent node berdasarkan level
+            const stack = [{ node: root, level: -1 }];
+
+            // Regex untuk menemukan nama file (karakter non-spasi pertama setelah prefix)
+            // INI PERBAIKANNYA: Regex ini sekarang mengabaikan karakter garis
+            const nameRegex = /([^\s│─└├].*)/;
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.trim() === "") continue;
+                
+                let name = '';
+                let nameIndex = -1;
+
+                // Cari nama file menggunakan regex
+                const match = line.match(nameRegex);
+                if (match) {
+                    name = match[1].trim();
+                    nameIndex = line.indexOf(name);
+                } else {
+                    // Jika regex gagal (misal baris hanya berisi spasi atau prefix), lewati
+                    continue;
+                }
+                
+                // Hitung level berdasarkan posisi (index) nama file
+                // Dibagi 4 karena setiap level di-indent 4 spasi ('│   ' atau '    ')
+                const level = Math.round(nameIndex / 4);
+
+                const newNode = {
+                    name: name,
+                    type: name.endsWith('/') ? 'folder' : 'file',
+                    children: []
+                };
+
+                // Mundur di stack sampai menemukan parent yang benar
+                while (stack.length > 0 && stack[stack.length - 1].level >= level) {
+                    stack.pop();
+                }
+
+                // Tambahkan node baru sebagai child dari parent terakhir di stack
+                if (stack.length > 0) {
+                    stack[stack.length - 1].node.children.push(newNode);
+                }
+
+                // Jika node baru adalah folder, tambahkan ke stack
+                if (newNode.type === 'folder') {
+                    stack.push({ node: newNode, level: level });
+                }
+            }
+            return root;
+        }
+
+
         generateBtn.onclick = generateTextOutput;
         copyBtn.onclick = copyToClipboard;
+        loadBtn.onclick = loadTreeFromText;
+        // outputText.addEventListener('input', loadTreeFromText); // Dihapus agar tidak auto-load
 
         addFolderRootBtn.onclick = () => {
             addItem(treeData, 'folder');
@@ -271,4 +393,6 @@
     </script>
 </body>
 </html>
+
+
 
