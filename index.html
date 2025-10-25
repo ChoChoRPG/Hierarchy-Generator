@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Generator Struktur Folder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        textarea {
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-white to-green-50 font-sans min-h-screen">
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <div class="flex items-center justify-center mb-6">
+            <img src="logo.svg" alt="Logo" class="w-10 h-10 mr-3">
+            <br>
+        </div>
+        <div>
+            <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-2">Hierarchy Generator</h1>
+            <p class="text-center text-gray-600 mb-6">Buat dan kelola struktur folder proyek Anda dengan mudah.</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-6">
+
+            <div class="md:w-1/2 bg-white p-6 rounded-lg shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Editor Visual</h2>
+
+                <div class="flex space-x-2 mb-4">
+                    <button
+                        id="add-folder-root-btn"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+                        ➕ Folder (Root)
+                    </button>
+                    <button
+                        id="add-file-root-btn"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+                        ➕ File (Root)
+                    </button>
+                </div>
+
+                <div id="tree-container" class="space-y-2 border-t pt-4"></div>
+            </div>
+
+            <div class="md:w-1/2 bg-white p-6 rounded-lg shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Output Teks</h2>
+                <button
+                    id="generate-btn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 mb-4">
+                    Hasilkan Teks
+                </button>
+                <textarea
+                    id="output-text"
+                    readonly
+                    class="w-full h-80 md:h-96 p-3 border border-gray-300 rounded-md bg-gray-50 text-sm"
+                    placeholder="Hasil teks akan muncul di sini..."></textarea>
+                <button
+                    id="copy-btn"
+                    class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+                    Salin Teks
+                </button>
+                <p id="copy-feedback" class="text-green-500 text-center mt-2 font-medium" style="display: none;">
+                    Berhasil disalin!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let treeData = {
+            name: "folder-project-utama/",
+            type: "folder",
+            children: [
+                { name: "css/", type: "folder", children: [
+                    { name: "styles.css", type: "file", children: [] }
+                ]},
+                { name: "js/", type: "folder", children: [
+                    { name: "script.js", type: "file", children: [] }
+                ]},
+                { name: "pictures/", type: "folder", children: [] }
+            ]
+        };
+
+        const treeContainer = document.getElementById('tree-container');
+        const generateBtn = document.getElementById('generate-btn');
+        const outputText = document.getElementById('output-text');
+        const copyBtn = document.getElementById('copy-btn');
+        const copyFeedback = document.getElementById('copy-feedback');
+        const addFolderRootBtn = document.getElementById('add-folder-root-btn');
+        const addFileRootBtn = document.getElementById('add-file-root-btn');
+
+        function renderTree() {
+            treeContainer.innerHTML = '';
+            treeContainer.appendChild(createNodeElement(treeData, null, 0));
+        }
+
+        function createNodeElement(node, parentNode, level) {
+            const nodeWrapper = document.createElement('div');
+            nodeWrapper.style.paddingLeft = `${level * 20}px`;
+
+            const nodeElement = document.createElement('div');
+            nodeElement.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-gray-100';
+
+            const leftSide = document.createElement('span');
+            leftSide.className = 'flex items-center';
+            
+            const icon = document.createElement('span');
+            icon.className = 'mr-2 text-lg';
+            icon.textContent = node.type === 'folder' ? '📁' : '📄';
+            
+            const nodeName = document.createElement('span');
+            nodeName.textContent = node.name;
+            nodeName.className = 'font-medium';
+            
+            leftSide.appendChild(icon);
+            leftSide.appendChild(nodeName);
+
+            const rightSide = document.createElement('span');
+            rightSide.className = 'space-x-2';
+
+            if (node.type === 'folder') {
+                const addFolderBtn = document.createElement('button');
+                addFolderBtn.textContent = '➕ Folder';
+                addFolderBtn.className = 'bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold py-1 px-2 rounded-md';
+                addFolderBtn.onclick = (e) => {
+                    e.stopPropagation(); 
+                    addItem(node, 'folder');
+                };
+                rightSide.appendChild(addFolderBtn);
+
+                const addFileBtn = document.createElement('button');
+                addFileBtn.textContent = '➕ File';
+                addFileBtn.className = 'bg-green-100 hover:bg-green-200 text-green-800 text-xs font-bold py-1 px-2 rounded-md';
+                addFileBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    addItem(node, 'file');
+                };
+                rightSide.appendChild(addFileBtn);
+            }
+
+            const renameBtn = document.createElement('button');
+            renameBtn.textContent = '✏️ Ganti Nama';
+            renameBtn.className = 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-bold py-1 px-2 rounded-md';
+            renameBtn.onclick = (e) => {
+                e.stopPropagation();
+                renameItem(node);
+            };
+            rightSide.appendChild(renameBtn);
+
+            if (parentNode) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.className = 'bg-red-100 hover:bg-red-200 text-red-800 text-xs font-bold py-1 px-2 rounded-md';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteItem(parentNode, node);
+                };
+                rightSide.appendChild(deleteBtn);
+            }
+
+            nodeElement.appendChild(leftSide);
+            nodeElement.appendChild(rightSide);
+            nodeWrapper.appendChild(nodeElement);
+
+            if (node.type === 'folder' && node.children.length > 0) {
+                const childrenContainer = document.createElement('div');
+                node.children.forEach(childNode => {
+                    childrenContainer.appendChild(createNodeElement(childNode, node, level + 1));
+                });
+                nodeWrapper.appendChild(childrenContainer);
+            }
+
+            return nodeWrapper;
+        }
+
+        function addItem(parentNode, type) {
+            let name = prompt(`Masukkan nama untuk ${type} baru:`);
+            if (name) {
+                if (type === 'folder' && !name.endsWith('/')) {
+                    name += '/';
+                }
+                const newNode = {
+                    name: name,
+                    type: type,
+                    children: []
+                };
+                parentNode.children.push(newNode);
+                renderTree();
+                generateTextOutput();
+            }
+        }
+
+        function renameItem(node) {
+            let newName = prompt(`Masukkan nama baru untuk "${node.name}":`, node.name);
+            if (newName && newName.trim() !== "") {
+                if (node.type === 'folder' && !newName.endsWith('/')) {
+                    newName += '/';
+                }
+                if (node.type === 'file' && newName.endsWith('/')) {
+                    newName = newName.slice(0, -1);
+                }
+                node.name = newName;
+                renderTree();
+                generateTextOutput();
+            }
+        }
+
+        function deleteItem(parentNode, nodeToDelete) {
+            parentNode.children = parentNode.children.filter(child => child !== nodeToDelete);
+            renderTree();
+            generateTextOutput();
+        }
+
+        function generateTextOutput() {
+            const output = [];
+            output.push(treeData.name);
+            generateNodeText(treeData.children, "", output);
+            outputText.value = output.join('\n');
+        }
+
+        function generateNodeText(children, prefix, outputArray) {
+            children.forEach((node, index) => {
+                const isLast = index === children.length - 1;
+                const connector = isLast ? '└── ' : '├── ';
+                const newPrefix = prefix + (isLast ? '    ' : '│   ');
+
+                outputArray.push(prefix + connector + node.name);
+
+                if (node.type === 'folder' && node.children.length > 0) {
+                    generateNodeText(node.children, newPrefix, outputArray);
+                }
+            });
+        }
+
+        function copyToClipboard() {
+            if (!outputText.value) return; 
+            
+            outputText.select();
+            document.execCommand('copy');
+
+            copyFeedback.style.display = 'block';
+            setTimeout(() => {
+                copyFeedback.style.display = 'none';
+            }, 2000); 
+        }
+
+        generateBtn.onclick = generateTextOutput;
+        copyBtn.onclick = copyToClipboard;
+
+        addFolderRootBtn.onclick = () => {
+            addItem(treeData, 'folder');
+        };
+
+        addFileRootBtn.onclick = () => {
+            addItem(treeData, 'file');
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTree();
+            generateTextOutput();
+        });
+
+    </script>
+</body>
+</html>
+
